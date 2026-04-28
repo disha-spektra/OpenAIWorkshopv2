@@ -202,10 +202,6 @@ resource application 'Microsoft.App/containerApps@2023-05-01' = {
               value: azureOpenAIEmbeddingDeploymentName
             }
             {
-              name: 'AZURE_OPENAI_API_VERSION'
-              value: '2025-03-01-preview'
-            }
-            {
               name: 'OPENAI_MODEL_NAME'
               value: 'gpt-5-chat'
             }

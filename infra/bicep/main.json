@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "14232049811035365351"
+      "templateHash": "11985661825552845383"
     }
   },
   "parameters": {
@@ -74,6 +74,13 @@
       "metadata": {
         "description": "Make MCP service internal-only (not exposed to public internet). Only apps in the same Container Apps environment can access it."
       }
+    },
+    "seedCosmosData": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Seed Cosmos DB with sample data on MCP service startup (seeds if containers are empty)"
+      }
     }
   },
   "resources": {
@@ -116,7 +123,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "10115838660472167797"
+              "templateHash": "54651985699249621"
             }
           },
           "parameters": {
@@ -297,6 +304,172 @@
                     ],
                     "kind": "MultiHash",
                     "version": 2
+                  }
+                }
+              },
+              "dependsOn": [
+                "database"
+              ]
+            },
+            "invoicesContainer": {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+              "apiVersion": "2025-10-15",
+              "name": "[format('{0}/{1}/{2}', variables('cosmosDbName'), variables('databaseName'), 'Invoices')]",
+              "properties": {
+                "resource": {
+                  "id": "Invoices",
+                  "partitionKey": {
+                    "paths": [
+                      "/subscription_id"
+                    ],
+                    "kind": "Hash"
+                  }
+                }
+              },
+              "dependsOn": [
+                "database"
+              ]
+            },
+            "paymentsContainer": {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+              "apiVersion": "2025-10-15",
+              "name": "[format('{0}/{1}/{2}', variables('cosmosDbName'), variables('databaseName'), 'Payments')]",
+              "properties": {
+                "resource": {
+                  "id": "Payments",
+                  "partitionKey": {
+                    "paths": [
+                      "/invoice_id"
+                    ],
+                    "kind": "Hash"
+                  }
+                }
+              },
+              "dependsOn": [
+                "database"
+              ]
+            },
+            "securityLogsContainer": {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+              "apiVersion": "2025-10-15",
+              "name": "[format('{0}/{1}/{2}', variables('cosmosDbName'), variables('databaseName'), 'SecurityLogs')]",
+              "properties": {
+                "resource": {
+                  "id": "SecurityLogs",
+                  "partitionKey": {
+                    "paths": [
+                      "/customer_id"
+                    ],
+                    "kind": "Hash"
+                  }
+                }
+              },
+              "dependsOn": [
+                "database"
+              ]
+            },
+            "ordersContainer": {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+              "apiVersion": "2025-10-15",
+              "name": "[format('{0}/{1}/{2}', variables('cosmosDbName'), variables('databaseName'), 'Orders')]",
+              "properties": {
+                "resource": {
+                  "id": "Orders",
+                  "partitionKey": {
+                    "paths": [
+                      "/customer_id"
+                    ],
+                    "kind": "Hash"
+                  }
+                }
+              },
+              "dependsOn": [
+                "database"
+              ]
+            },
+            "supportTicketsContainer": {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+              "apiVersion": "2025-10-15",
+              "name": "[format('{0}/{1}/{2}', variables('cosmosDbName'), variables('databaseName'), 'SupportTickets')]",
+              "properties": {
+                "resource": {
+                  "id": "SupportTickets",
+                  "partitionKey": {
+                    "paths": [
+                      "/customer_id"
+                    ],
+                    "kind": "Hash"
+                  }
+                }
+              },
+              "dependsOn": [
+                "database"
+              ]
+            },
+            "dataUsageContainer": {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+              "apiVersion": "2025-10-15",
+              "name": "[format('{0}/{1}/{2}', variables('cosmosDbName'), variables('databaseName'), 'DataUsage')]",
+              "properties": {
+                "resource": {
+                  "id": "DataUsage",
+                  "partitionKey": {
+                    "paths": [
+                      "/subscription_id"
+                    ],
+                    "kind": "Hash"
+                  }
+                }
+              },
+              "dependsOn": [
+                "database"
+              ]
+            },
+            "serviceIncidentsContainer": {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+              "apiVersion": "2025-10-15",
+              "name": "[format('{0}/{1}/{2}', variables('cosmosDbName'), variables('databaseName'), 'ServiceIncidents')]",
+              "properties": {
+                "resource": {
+                  "id": "ServiceIncidents",
+                  "partitionKey": {
+                    "paths": [
+                      "/id"
+                    ],
+                    "kind": "Hash"
+                  }
+                }
+              },
+              "dependsOn": [
+                "database"
+              ]
+            },
+            "knowledgeDocumentsContainer": {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+              "apiVersion": "2025-10-15",
+              "name": "[format('{0}/{1}/{2}', variables('cosmosDbName'), variables('databaseName'), 'KnowledgeDocuments')]",
+              "properties": {
+                "resource": {
+                  "id": "KnowledgeDocuments",
+                  "partitionKey": {
+                    "paths": [
+                      "/category"
+                    ],
+                    "kind": "Hash"
+                  },
+                  "indexingPolicy": {
+                    "indexingMode": "consistent",
+                    "automatic": true,
+                    "includedPaths": [
+                      {
+                        "path": "/*"
+                      }
+                    ],
+                    "excludedPaths": [
+                      {
+                        "path": "/embedding/*"
+                      }
+                    ]
                   }
                 }
               },
@@ -1441,6 +1614,9 @@
           "mcpInternalOnly": {
             "value": "[parameters('mcpInternalOnly')]"
           },
+          "seedOnStartup": {
+            "value": "[parameters('seedCosmosData')]"
+          },
           "containerAppsEnvironmentDomain": {
             "value": "[reference('containerAppsEnv').outputs.defaultDomain.value]"
           },
@@ -1458,7 +1634,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "10423840434759586351"
+              "templateHash": "11955524770040244152"
             }
           },
           "parameters": {
@@ -1552,6 +1728,13 @@
               "metadata": {
                 "description": "Use placeholder image for initial deployment (before real image is pushed to ACR)"
               }
+            },
+            "seedOnStartup": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Seed Cosmos DB with sample data on MCP service startup (seeds if containers are empty)"
+              }
             }
           },
           "variables": {
@@ -1559,7 +1742,7 @@
             "containerImage": "[if(not(empty(parameters('imageName'))), parameters('imageName'), if(parameters('usePlaceholderImage'), 'mcr.microsoft.com/k8se/quickstart:latest', format('{0}.azurecr.io/mcp-service:{1}', parameters('containerRegistryName'), parameters('imageTag'))))]",
             "azdTags": "[union(parameters('tags'), createObject('azd-service-name', 'mcp', 'azd-service-type', 'containerapp'))]",
             "cosmosSecrets": "[if(and(not(parameters('useCosmosManagedIdentity')), not(empty(parameters('cosmosDbKey')))), createArray(createObject('name', 'cosmosdb-key', 'value', parameters('cosmosDbKey'))), createArray())]",
-            "cosmosEnvSettings": "[concat(createArray(createObject('name', 'COSMOSDB_ENDPOINT', 'value', parameters('cosmosDbEndpoint')), createObject('name', 'COSMOS_DB_NAME', 'value', parameters('cosmosDbName')), createObject('name', 'COSMOS_CONTAINER_NAME', 'value', parameters('cosmosContainerName')), createObject('name', 'COSMOS_USE_MANAGED_IDENTITY', 'value', string(parameters('useCosmosManagedIdentity')))), if(and(not(parameters('useCosmosManagedIdentity')), not(empty(parameters('cosmosDbKey')))), createArray(createObject('name', 'COSMOSDB_KEY', 'secretRef', 'cosmosdb-key')), createArray()))]",
+            "cosmosEnvSettings": "[concat(createArray(createObject('name', 'USE_COSMOSDB', 'value', 'true'), createObject('name', 'SEED_ON_STARTUP', 'value', string(parameters('seedOnStartup'))), createObject('name', 'COSMOSDB_ENDPOINT', 'value', parameters('cosmosDbEndpoint')), createObject('name', 'COSMOS_DATABASE_NAME', 'value', parameters('cosmosDbName')), createObject('name', 'COSMOS_CONTAINER_NAME', 'value', parameters('cosmosContainerName')), createObject('name', 'COSMOS_USE_MANAGED_IDENTITY', 'value', string(parameters('useCosmosManagedIdentity')))), if(and(not(parameters('useCosmosManagedIdentity')), not(empty(parameters('cosmosDbKey')))), createArray(createObject('name', 'COSMOSDB_KEY', 'secretRef', 'cosmosdb-key')), createArray()))]",
             "managedIdentityEnv": "[if(not(empty(parameters('userAssignedIdentityClientId'))), createArray(createObject('name', 'AZURE_CLIENT_ID', 'value', parameters('userAssignedIdentityClientId')), createObject('name', 'MANAGED_IDENTITY_CLIENT_ID', 'value', parameters('userAssignedIdentityClientId'))), createArray())]"
           },
           "resources": [
@@ -1709,7 +1892,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "13592294615537339873"
+              "templateHash": "16138148915468350429"
             }
           },
           "parameters": {
@@ -1878,13 +2061,6 @@
               "metadata": {
                 "description": "Use placeholder image for initial deployment (before real image is pushed to ACR)"
               }
-            },
-            "azureOpenAIApiVersion": {
-              "type": "string",
-              "defaultValue": "2025-03-01-preview",
-              "metadata": {
-                "description": "Azure OpenAI API version"
-              }
             }
           },
           "variables": {
@@ -1964,7 +2140,7 @@
                           "failureThreshold": 3
                         }
                       ],
-                      "env": "[concat(createArray(createObject('name', 'AZURE_OPENAI_ENDPOINT', 'value', parameters('azureOpenAIEndpoint')), createObject('name', 'AZURE_OPENAI_CHAT_DEPLOYMENT', 'value', parameters('azureOpenAIDeploymentName')), createObject('name', 'AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME', 'value', parameters('azureOpenAIDeploymentName')), createObject('name', 'AZURE_OPENAI_EMBEDDING_DEPLOYMENT', 'value', parameters('azureOpenAIEmbeddingDeploymentName')), createObject('name', 'AZURE_OPENAI_EMB_DEPLOYMENT', 'value', parameters('azureOpenAIEmbeddingDeploymentName')), createObject('name', 'AZURE_OPENAI_API_VERSION', 'value', parameters('azureOpenAIApiVersion')), createObject('name', 'OPENAI_MODEL_NAME', 'value', 'gpt-5-chat'), createObject('name', 'MCP_SERVER_URI', 'value', parameters('mcpServiceUrl'))), variables('cosmosEnvSettings'), variables('cosmosKeyEnv'), variables('managedIdentityEnv'), createArray(createObject('name', 'COSMOS_USE_MANAGED_IDENTITY', 'value', string(parameters('useCosmosManagedIdentity'))), createObject('name', 'DISABLE_AUTH', 'value', string(parameters('disableAuth'))), createObject('name', 'AGENT_MODULE', 'value', 'agents.agent_framework.single_agent'), createObject('name', 'MAGENTIC_LOG_WORKFLOW_EVENTS', 'value', 'true'), createObject('name', 'MAGENTIC_ENABLE_PLAN_REVIEW', 'value', 'true'), createObject('name', 'MAGENTIC_MAX_ROUNDS', 'value', '10'), createObject('name', 'HANDOFF_CONTEXT_TRANSFER_TURNS', 'value', '-1'), createObject('name', 'AAD_TENANT_ID', 'value', variables('effectiveTenantId')), createObject('name', 'TENANT_ID', 'value', variables('effectiveTenantId')), createObject('name', 'CLIENT_ID', 'value', parameters('aadClientId')), createObject('name', 'AUTHORITY', 'value', variables('aadAuthority')), createObject('name', 'MCP_API_AUDIENCE', 'value', variables('apiAudience')), createObject('name', 'AAD_API_SCOPE', 'value', if(not(empty(variables('apiAudience'))), format('{0}/user_impersonation', variables('apiAudience')), '')), createObject('name', 'ALLOWED_EMAIL_DOMAIN', 'value', parameters('allowedEmailDomain'))))]"
+                      "env": "[concat(createArray(createObject('name', 'AZURE_OPENAI_ENDPOINT', 'value', parameters('azureOpenAIEndpoint')), createObject('name', 'AZURE_OPENAI_CHAT_DEPLOYMENT', 'value', parameters('azureOpenAIDeploymentName')), createObject('name', 'AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME', 'value', parameters('azureOpenAIDeploymentName')), createObject('name', 'AZURE_OPENAI_EMBEDDING_DEPLOYMENT', 'value', parameters('azureOpenAIEmbeddingDeploymentName')), createObject('name', 'AZURE_OPENAI_EMB_DEPLOYMENT', 'value', parameters('azureOpenAIEmbeddingDeploymentName')), createObject('name', 'OPENAI_MODEL_NAME', 'value', 'gpt-5-chat'), createObject('name', 'MCP_SERVER_URI', 'value', parameters('mcpServiceUrl'))), variables('cosmosEnvSettings'), variables('cosmosKeyEnv'), variables('managedIdentityEnv'), createArray(createObject('name', 'COSMOS_USE_MANAGED_IDENTITY', 'value', string(parameters('useCosmosManagedIdentity'))), createObject('name', 'DISABLE_AUTH', 'value', string(parameters('disableAuth'))), createObject('name', 'AGENT_MODULE', 'value', 'agents.agent_framework.single_agent'), createObject('name', 'MAGENTIC_LOG_WORKFLOW_EVENTS', 'value', 'true'), createObject('name', 'MAGENTIC_ENABLE_PLAN_REVIEW', 'value', 'true'), createObject('name', 'MAGENTIC_MAX_ROUNDS', 'value', '10'), createObject('name', 'HANDOFF_CONTEXT_TRANSFER_TURNS', 'value', '-1'), createObject('name', 'AAD_TENANT_ID', 'value', variables('effectiveTenantId')), createObject('name', 'TENANT_ID', 'value', variables('effectiveTenantId')), createObject('name', 'CLIENT_ID', 'value', parameters('aadClientId')), createObject('name', 'AUTHORITY', 'value', variables('aadAuthority')), createObject('name', 'MCP_API_AUDIENCE', 'value', variables('apiAudience')), createObject('name', 'AAD_API_SCOPE', 'value', if(not(empty(variables('apiAudience'))), format('{0}/user_impersonation', variables('apiAudience')), '')), createObject('name', 'ALLOWED_EMAIL_DOMAIN', 'value', parameters('allowedEmailDomain'))))]"
                     }
                   ],
                   "scale": {

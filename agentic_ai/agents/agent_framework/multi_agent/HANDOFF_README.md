@@ -183,7 +183,6 @@ product_promotions: "You qualify for 3 active promotions…"
 | `AZURE_OPENAI_API_KEY` | (required for key auth) | Azure OpenAI API key |
 | `AZURE_OPENAI_ENDPOINT` | (required) | Azure OpenAI endpoint URL |
 | `AZURE_OPENAI_CHAT_DEPLOYMENT` | (required) | Azure deployment name (passed to `OpenAIChatClient` as `model=`) |
-| `AZURE_OPENAI_API_VERSION` | (required) | Azure OpenAI API version |
 | `MCP_SERVER_URI` | (optional) | MCP server endpoint for domain tools |
 | `AGENT_MODULE` | – | `agents.agent_framework.multi_agent.handoff_multi_domain_agent` |
 

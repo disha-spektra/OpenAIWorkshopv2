@@ -113,7 +113,6 @@ class BaseAgent:
         self.azure_deployment = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT")  
         self.azure_openai_key = os.getenv("AZURE_OPENAI_API_KEY")  
         self.azure_openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")  
-        self.api_version = os.getenv("AZURE_OPENAI_API_VERSION")  
         self.mcp_server_uri = os.getenv("MCP_SERVER_URI") 
         self.openai_model_name = os.getenv("OPENAI_MODEL_NAME")
         

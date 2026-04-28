@@ -75,9 +75,6 @@ param environmentName string = 'dev'
 @description('Use placeholder image for initial deployment (before real image is pushed to ACR)')
 param usePlaceholderImage bool = true
 
-@description('Azure OpenAI API version')
-param azureOpenAIApiVersion string = '2025-03-01-preview'
-
 var appName = '${baseName}-app-${environmentName}'
 // Use placeholder image for initial deployment - update-containers.yml will set the real image
 var containerImage = !empty(imageName) ? imageName : (usePlaceholderImage ? 'mcr.microsoft.com/k8se/quickstart:latest' : '${containerRegistryName}.azurecr.io/backend-app:${imageTag}')
@@ -218,10 +215,6 @@ resource application 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'AZURE_OPENAI_EMB_DEPLOYMENT'
               value: azureOpenAIEmbeddingDeploymentName
-            }
-            {
-              name: 'AZURE_OPENAI_API_VERSION'
-              value: azureOpenAIApiVersion
             }
             {
               name: 'OPENAI_MODEL_NAME'

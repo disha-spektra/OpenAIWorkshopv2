@@ -70,7 +70,6 @@ Branch mapping: `james-dev` → `integration-james`, `main` → `production`
 | `AZURE_OPENAI_CHAT_DEPLOYMENT` | Chat model deployment |
 | `AZURE_OPENAI_EVAL_DEPLOYMENT` | Eval model deployment |
 | `AZURE_AI_PROJECT_ENDPOINT` | AI Foundry project endpoint |
-| `AZURE_OPENAI_API_VERSION` | OpenAI API version |
 
 ## Azure Setup
 
