@@ -607,56 +607,137 @@ def create_fraud_analysis_workflow(
 # ============================================================================
 
 
+SAMPLE_ALERTS = [
+    SuspiciousActivityAlert(
+        alert_id="ALERT-001",
+        customer_id=1,
+        alert_type="multi_country_login",
+        description="Login attempts from USA and Russia within 2 hours",
+        timestamp="",
+        severity="high",
+    ),
+    SuspiciousActivityAlert(
+        alert_id="ALERT-002",
+        customer_id=2,
+        alert_type="data_spike",
+        description="Data usage increased by 500% in last 24 hours",
+        timestamp="",
+        severity="medium",
+    ),
+    SuspiciousActivityAlert(
+        alert_id="ALERT-003",
+        customer_id=3,
+        alert_type="unusual_charges",
+        description="Three large purchases totaling $5,000 in 10 minutes",
+        timestamp="",
+        severity="high",
+    ),
+]
+
+
+def _print_alert_menu() -> None:
+    print("\nAvailable sample alerts:")
+    for idx, a in enumerate(SAMPLE_ALERTS, start=1):
+        print(f"  {idx}. {a.alert_id} - {a.alert_type} ({a.severity}): {a.description}")
+
+
+def _select_alert() -> SuspiciousActivityAlert:
+    _print_alert_menu()
+    while True:
+        choice = input("\nSelect an alert (1-3) [default 1]: ").strip() or "1"
+        if choice in {"1", "2", "3"}:
+            alert = SAMPLE_ALERTS[int(choice) - 1]
+            alert.timestamp = datetime.now().isoformat()
+            return alert
+        print("Invalid choice. Enter 1, 2, or 3.")
+
+
+def _prompt_analyst_decision(assessment: "FraudRiskAssessment") -> None:
+    """Human-in-the-loop step: ask the analyst what action to take."""
+    needs_review = assessment.overall_risk_score >= 0.6
+    print(f"\n{'='*60}")
+    print("ANALYST REVIEW" if needs_review else "AUTO-CLEAR")
+    print(f"{'='*60}")
+    if not needs_review:
+        print("Risk score is below 0.6 - no human review required. Auto-cleared.")
+        return
+
+    print("Risk score is >= 0.6 - human review required.")
+    print("\nAvailable actions:")
+    print("  1. Clear (no action)")
+    print("  2. Lock account")
+    print("  3. Refund charges")
+    print("  4. Lock account and refund charges")
+
+    while True:
+        choice = input("\nEnter action (1-4) [default 2]: ").strip() or "2"
+        if choice in {"1", "2", "3", "4"}:
+            break
+        print("Invalid choice. Enter 1, 2, 3, or 4.")
+
+    action_map = {"1": "clear", "2": "lock_account", "3": "refund_charges", "4": "lock_account_and_refund"}
+    action = action_map[choice]
+
+    notes = input("Enter analyst notes: ").strip() or "(no notes provided)"
+    analyst_id = input("Enter analyst ID (default: analyst_cli): ").strip() or "analyst_cli"
+
+    print(f"\n{'='*60}")
+    print("DECISION SUBMITTED")
+    print(f"{'='*60}")
+    print(f"Analyst ID: {analyst_id}")
+    print(f"Action: {action}")
+    print(f"Notes: {notes}")
+    print("Workflow complete.")
+
+
 async def main():
-    """Test the workflow standalone (without Durable Task)."""
-    import asyncio
+    """Run the fraud analysis workflow with an interactive analyst review step."""
     import os
     from dotenv import load_dotenv
-    from azure.identity import AzureCliCredential
-    
+
     load_dotenv()
-    
-    # Initialize MCP tool
+
+    api_key = os.getenv("AZURE_OPENAI_API_KEY")
+    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    deployment = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT")
+    if not all([api_key, endpoint, deployment]):
+        raise RuntimeError(
+            "Set AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, and AZURE_OPENAI_CHAT_DEPLOYMENT in .env"
+        )
+
     mcp_uri = os.getenv("MCP_SERVER_URI", "http://localhost:8000/mcp")
     mcp_tool = MCPStreamableHTTPTool(name="contoso_mcp", url=mcp_uri, timeout=30)
-    
+
     async with mcp_tool:
-        # Initialize chat client
         chat_client = OpenAIChatClient(
-            credential=AzureCliCredential(),
-            model=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT", "gpt-4o"),
+            api_key=api_key,
+            model=deployment,
+            azure_endpoint=endpoint,
         )
-        
-        # Create workflow
+
+        alert = _select_alert()
         workflow = create_fraud_analysis_workflow(mcp_tool, chat_client)
-        
-        # Test alert
-        alert = SuspiciousActivityAlert(
-            alert_id="TEST-001",
-            customer_id=1,
-            alert_type="multi_country_login",
-            description="Login attempts from USA and Russia within 2 hours",
-            timestamp=datetime.now().isoformat(),
-            severity="high",
-        )
-        
+
         print(f"\n{'='*60}")
         print(f"Running Fraud Analysis Workflow for Alert: {alert.alert_id}")
         print(f"{'='*60}\n")
-        
-        # Run workflow
+
+        final_assessment: FraudRiskAssessment | None = None
         async for event in workflow.run(alert, stream=True):
             print(f"Event: {type(event).__name__}")
             if event.type == "output" and isinstance(event.data, FraudRiskAssessment):
-                assessment = event.data
+                final_assessment = event.data
                 print(f"\n{'='*60}")
                 print("FRAUD RISK ASSESSMENT")
                 print(f"{'='*60}")
-                print(f"Alert ID: {assessment.alert_id}")
-                print(f"Risk Score: {assessment.overall_risk_score:.2f}")
-                print(f"Risk Level: {assessment.risk_level}")
-                print(f"Recommended Action: {assessment.recommended_action}")
-                print(f"Reasoning: {assessment.reasoning}")
+                print(f"Alert ID: {final_assessment.alert_id}")
+                print(f"Risk Score: {final_assessment.overall_risk_score:.2f}")
+                print(f"Risk Level: {final_assessment.risk_level}")
+                print(f"Recommended Action: {final_assessment.recommended_action}")
+                print(f"Reasoning: {final_assessment.reasoning}")
+
+        if final_assessment is not None:
+            _prompt_analyst_decision(final_assessment)
 
 
 if __name__ == "__main__":
