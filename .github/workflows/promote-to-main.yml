@@ -32,8 +32,29 @@ jobs:
 
       - name: Create or update PR to main
         env:
+          # Prefer GH_PAT (allows PR-trigger semantics on downstream workflows).
+          # Falls back to GITHUB_TOKEN if GH_PAT is unset or invalid; in that
+          # case the PR is still created/updated, but `pull_request` workflows
+          # will not auto-trigger on the synthetic PR (GitHub's anti-recursion
+          # rule). Production CI runs on push-to-main after merge regardless.
           GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          FALLBACK_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Skip when int-agentic == main (nothing to promote, branches in sync).
+          COMMITS_AHEAD=$(git rev-list --count origin/main..HEAD)
+          if [ "$COMMITS_AHEAD" = "0" ]; then
+            echo "✅ int-agentic is in sync with main (0 commits ahead) — nothing to promote."
+            exit 0
+          fi
+          echo "ℹ️  int-agentic is ${COMMITS_AHEAD} commit(s) ahead of main."
+
+          # Probe the token; on auth failure, fall back to GITHUB_TOKEN.
+          if ! gh auth status >/dev/null 2>&1; then
+            echo "⚠️  Primary GH_TOKEN failed auth (GH_PAT likely expired). Falling back to GITHUB_TOKEN."
+            echo "   Update the GH_PAT secret in repo settings to restore PR-trigger semantics."
+            export GH_TOKEN="$FALLBACK_TOKEN"
+          fi
+
           # Check if there's already an open PR from int-agentic → main
           EXISTING_PR=$(gh pr list \
             --base main \
