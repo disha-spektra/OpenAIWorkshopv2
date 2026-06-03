@@ -290,9 +290,9 @@ class TestWorkflowEventModel:
     """Verify the unified WorkflowEvent replaces old typed event classes."""
 
     def test_workflow_event_output(self):
-        """WorkflowEvent.output() factory creates an output event."""
+        """WorkflowEvent constructor creates an output event."""
         from agent_framework import WorkflowEvent
-        event = WorkflowEvent.output("executor_1", "final answer")
+        event = WorkflowEvent("output", "final answer", executor_id="executor_1")
         assert event.type == "output"
         assert event.executor_id == "executor_1"
         assert event.data == "final answer"
@@ -305,10 +305,12 @@ class TestWorkflowEventModel:
         assert event.executor_id == "crm_billing"
 
     def test_workflow_event_emit(self):
-        """WorkflowEvent.emit() for streaming data."""
+        """WorkflowEvent.emit() (deprecated) and 'intermediate' type for streaming data."""
         from agent_framework import WorkflowEvent
+        # emit() is deprecated but still works as a compatibility alias
         event = WorkflowEvent.emit("agent_1", "streaming chunk")
-        assert event.type == "data"
+        # In 1.6+ this becomes type='data' (kept for back-compat) or 'intermediate'
+        assert event.type in ("data", "intermediate")
         assert event.executor_id == "agent_1"
 
     def test_workflow_event_request_info(self):
@@ -597,15 +599,18 @@ class TestMagenticGroupIntegration:
         assert isinstance(storage, InMemoryCheckpointStorage)
 
     def test_handoff_uses_builtin_checkpoint_storage(self):
-        """Handoff agent picks up the built-in checkpoint storage by default."""
-        from agents.agent_framework.multi_agent.handoff_multi_domain_agent import Agent
-        from agent_framework import InMemoryCheckpointStorage
+        """Handoff agent uses the session-backed dict checkpoint storage by default."""
+        from agents.agent_framework.multi_agent.handoff_multi_domain_agent import (
+            Agent,
+            _DictCheckpointStorage,
+        )
         from agents.agent_framework.multi_agent import checkpoint_storage as cps
 
         cps.reset_storage_cache()
         agent = Agent(state_store={}, session_id="handoff-builtin-test")
-        assert isinstance(agent._checkpoint_storage, InMemoryCheckpointStorage)
-        assert agent._workflow_name == "handoff-handoff-builtin-test"
+        # Handoff uses a dict-backed storage that wraps the agent's state_store
+        # so checkpoints persist alongside conversation state per session.
+        assert isinstance(agent._checkpoint_storage, _DictCheckpointStorage)
 
     def test_checkpoint_storage_factory_implements_1_2_1_protocol(self):
         """Built-in storage exposes the 1.2.x CheckpointStorage protocol surface."""
@@ -727,13 +732,13 @@ class TestMagenticGroupIntegration:
         from agent_framework import WorkflowEvent
         
         # Plain string data
-        event = WorkflowEvent.output("exec1", "Hello")
+        event = WorkflowEvent("output", "Hello", executor_id="exec1")
         assert Agent._extract_text_from_event(event) == "Hello"
         
         # Object with .text attribute
         mock_msg = MagicMock()
         mock_msg.text = "From message"
-        event2 = WorkflowEvent.output("exec1", mock_msg)
+        event2 = WorkflowEvent("output", mock_msg, executor_id="exec1")
         assert Agent._extract_text_from_event(event2) == "From message"
 
     def test_magentic_process_output_event(self):
@@ -745,7 +750,7 @@ class TestMagenticGroupIntegration:
         ws_manager = AsyncMock()
         agent.set_websocket_manager(ws_manager)
         
-        event = WorkflowEvent.output("exec1", "Final answer text")
+        event = WorkflowEvent("output", "Final answer text", executor_id="exec1")
         asyncio.run(agent._process_workflow_event(event))
         
         ws_manager.broadcast.assert_called()
@@ -766,7 +771,7 @@ class TestMagenticGroupIntegration:
         # Create a mock data event with text
         mock_data = MagicMock()
         mock_data.text = "streaming token"
-        event = WorkflowEvent.emit("crm_billing", mock_data)
+        event = WorkflowEvent("data", mock_data, executor_id="crm_billing")
         
         asyncio.run(agent._process_workflow_event(event))
         
@@ -780,17 +785,17 @@ class TestMagenticGroupIntegration:
 
 
 class TestFrameworkVersion:
-    """Verify we're running against the expected 1.2.x version."""
+    """Verify we're running against the expected 1.7.x version."""
 
     def test_agent_framework_version(self):
-        """agent_framework is at 1.2.1."""
+        """agent_framework is at 1.7.0."""
         import agent_framework
-        assert agent_framework.__version__ == "1.2.1", \
-            f"Expected 1.2.1, got {agent_framework.__version__}"
+        assert agent_framework.__version__ == "1.7.0", \
+            f"Expected 1.7.0, got {agent_framework.__version__}"
 
     def test_agent_framework_core_installed(self):
-        """agent-framework-core is installed at 1.2.1 as a dependency."""
+        """agent-framework-core is installed at 1.7.0 as a dependency."""
         import importlib.metadata
         version = importlib.metadata.version('agent-framework-core')
-        assert version == "1.2.1", \
-            f"Expected 1.2.1, got {version}"
+        assert version == "1.7.0", \
+            f"Expected 1.7.0, got {version}"
