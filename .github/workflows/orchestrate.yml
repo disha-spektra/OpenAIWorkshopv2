@@ -32,25 +32,63 @@ on:
         description: "Environment to deploy (e.g. integration-james, production)"
         required: true
 
+  # ──────────────────────────────────────────────────────────────────────
+  # Path filters: skip the expensive build+deploy+test pipeline for
+  # changes that cannot affect the running application. Keep this list
+  # conservative — when in doubt, run the pipeline.
+  #
+  # If you add new "documentation-only" file patterns (e.g. *.rst), add
+  # them to BOTH the pull_request and push blocks to keep them in sync.
+  # ──────────────────────────────────────────────────────────────────────
   pull_request:
     branches:
       - int-agentic
       - main
     paths-ignore:
+      # Documentation & prose
       - '**/*.md'
       - 'docs/**'
       - 'LICENSE'
-      - '.github/workflows/readme.md'
+      # Sample env templates (never loaded at runtime)
+      - '**/.env.sample'
+      - '**/.env.example'
+      # Repo / editor metadata
+      - '**/.gitignore'
+      - '.gitattributes'
+      - '.editorconfig'
+      - '.vscode/**'
+      - '.idea/**'
+      # GitHub metadata that doesn't affect app behavior
+      - '.github/CODEOWNERS'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE/**'
+      - '.github/dependabot.yml'
+      - '.github/workflows/promote-to-main.yml'
 
   push:
     branches:
       - main
       - '*-dev'
     paths-ignore:
+      # Documentation & prose
       - '**/*.md'
       - 'docs/**'
       - 'LICENSE'
-      - '.github/workflows/readme.md'
+      # Sample env templates (never loaded at runtime)
+      - '**/.env.sample'
+      - '**/.env.example'
+      # Repo / editor metadata
+      - '**/.gitignore'
+      - '.gitattributes'
+      - '.editorconfig'
+      - '.vscode/**'
+      - '.idea/**'
+      # GitHub metadata that doesn't affect app behavior
+      - '.github/CODEOWNERS'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE/**'
+      - '.github/dependabot.yml'
+      - '.github/workflows/promote-to-main.yml'
 
 permissions:
   contents: write

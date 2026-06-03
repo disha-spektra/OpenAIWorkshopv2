@@ -12,9 +12,24 @@ on:
     branches:
       - int-agentic
     paths-ignore:
+      # Documentation & prose
       - '**/*.md'
       - 'docs/**'
       - 'LICENSE'
+      # Sample env templates (never loaded at runtime)
+      - '**/.env.sample'
+      - '**/.env.example'
+      # Repo / editor metadata
+      - '**/.gitignore'
+      - '.gitattributes'
+      - '.editorconfig'
+      - '.vscode/**'
+      - '.idea/**'
+      # GitHub metadata that doesn't affect app behavior
+      - '.github/CODEOWNERS'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE/**'
+      - '.github/dependabot.yml'
   workflow_dispatch:  # Allow manual trigger
 
 permissions:
